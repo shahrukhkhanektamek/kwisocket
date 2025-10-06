@@ -1,44 +1,55 @@
-// server.js
+const express = require("express");
+const https = require("http"); // change from http
 const fs = require("fs");
-const https = require("https");
+const cors = require("cors");
 const { Server } = require("socket.io");
 
-// Load self-signed SSL certificate
-const options = {
-  key: fs.readFileSync("/etc/ssl/private/selfsigned.key"),  // path to your private key
-  cert: fs.readFileSync("/etc/ssl/private/selfsigned.crt"), // path to your certificate
+const app = express();
+app.use(cors());
+app.use(express.json());
+
+// 👇 Serve static HTML files from "public" folder
+app.use(express.static("public"));
+
+// 🔹 Load SSL certificate
+const sslOptions = {
+  key: fs.readFileSync("/etc/ssl/private/selfsigned.key"), // path to your private key
+  cert: fs.readFileSync("/etc/ssl/private/selfsigned.crt"), // path to your cert
 };
 
-// Create HTTPS server
-const server = https.createServer(options);
+// 🔹 Create HTTPS server instead of HTTP
+const server = https.createServer(sslOptions, app);
 
-// Create Socket.IO server
+// 🔹 Initialize Socket.IO
 const io = new Server(server, {
-  cors: {
-    origin: "*",
-    methods: ["GET", "POST"],
-  },
+  cors: { origin: "*", methods: ["GET", "POST"] },
 });
 
-// Socket.IO logic
 io.on("connection", (socket) => {
   console.log("Client connected:", socket.id);
 
+  // Join device room
   socket.on("joinDevice", (deviceId) => {
-    console.log("Device joined:", deviceId);
+    console.log(`Device joined: ${deviceId}`);
+    socket.join(deviceId);
   });
-
-  // Example: send a test message every 10 seconds
-  setInterval(() => {
-    socket.emit("test", { msg: "Hello from server!" });
-  }, 10000);
 
   socket.on("disconnect", () => {
     console.log("Client disconnected:", socket.id);
   });
 });
 
-// Start server on port 3003
-server.listen(3003, () => {
-  console.log("HTTPS Socket.IO server running on https://145.223.18.56:3003");
+// Endpoint to trigger incoming request
+app.post("/send-request", (req, res) => {
+  const { deviceId, name, email, phone } = req.body;
+  if (!deviceId || !name || !phone)
+    return res.status(400).json({ message: "Missing parameters" });
+
+  io.to(deviceId).emit(deviceId, { name, email, phone });
+  res.json({ success: true });
 });
+
+// 🔹 Start HTTPS server
+server.listen(3003, () =>
+  console.log("HTTPS Socket.IO server running on https://145.223.18.56:3003")
+);
