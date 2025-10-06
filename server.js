@@ -7,6 +7,9 @@ const app = express();
 app.use(cors());
 app.use(express.json());
 
+// 👇 Serve static HTML files from "public" folder
+app.use(express.static("public"));
+
 const server = http.createServer(app);
 const io = new Server(server, {
   cors: { origin: "*", methods: ["GET", "POST"] }
@@ -36,4 +39,4 @@ app.post("/send-request", (req, res) => {
   res.json({ success: true });
 });
 
-server.listen(3003, () => console.log("Server running on port 3000"));
+server.listen(3003, () => console.log("Server running on port 3003"));

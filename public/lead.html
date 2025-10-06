@@ -1,0 +1,72 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Socket.IO Test Client</title>
+  <script src="https://cdn.socket.io/4.7.2/socket.io.min.js"></script>
+</head>
+<body>
+  <h2>Socket.IO Test Client</h2>
+
+  <input id="deviceId" placeholder="Device ID"><br>
+  <input id="name" placeholder="Name"><br>
+  <input id="email" placeholder="Email"><br>
+  <input id="phone" placeholder="Phone"><br>
+  <button id="sendBtn">Send Incoming Request</button>
+
+  <div id="log"></div>
+
+  <script>
+    // 🧩 Get JSON data from URL ?data=...
+    const params = new URLSearchParams(window.location.search);
+    const rawData = params.get("data");
+    let employee_lead = {};
+
+    try {
+      if (rawData) {
+        employee_lead = JSON.parse(decodeURIComponent(rawData));
+      }
+    } catch (err) {
+      console.error("Invalid data format:", err);
+    }
+
+    // Fill input values
+    document.getElementById("deviceId").value = employee_lead.device_id || "";
+    document.getElementById("name").value = employee_lead.name || "";
+    document.getElementById("email").value = employee_lead.email || "";
+    document.getElementById("phone").value = employee_lead.phone || "";
+
+    // Only run socket logic if device_id exists
+    if (employee_lead.device_id) {
+      const serverUrl = "https://145.223.18.56:3003"; // LAN or your Socket.IO server
+      const socket = io(serverUrl);
+      const log = document.getElementById("log");
+
+      socket.on("connect", () => {
+        log.innerHTML += `<p>Connected (${socket.id})</p>`;
+        socket.emit("joinDevice", employee_lead.device_id);
+      });
+
+      socket.on(employee_lead.device_id, (data) => {
+        log.innerHTML += `<p style="color:green;">Incoming Data: ${JSON.stringify(data)}</p>`;
+      });
+
+      document.getElementById("sendBtn").onclick = async () => {
+        const deviceId = document.getElementById("deviceId").value;
+        const name = document.getElementById("name").value;
+        const email = document.getElementById("email").value;
+        const phone = document.getElementById("phone").value;
+
+        const res = await fetch(`${serverUrl}/send-request`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ deviceId, name, email, phone })
+        });
+
+        const result = await res.json();
+        log.innerHTML += `<p>Request Sent: ${JSON.stringify(result)}</p>`;
+      };
+    }
+  </script>
+</body>
+</html>
