@@ -1,42 +1,44 @@
-const express = require("express");
-const http = require("http");
-const cors = require("cors");
+// server.js
+const fs = require("fs");
+const https = require("https");
 const { Server } = require("socket.io");
 
-const app = express();
-app.use(cors());
-app.use(express.json());
+// Load self-signed SSL certificate
+const options = {
+  key: fs.readFileSync("/etc/ssl/private/selfsigned.key"),  // path to your private key
+  cert: fs.readFileSync("/etc/ssl/private/selfsigned.crt"), // path to your certificate
+};
 
-// 👇 Serve static HTML files from "public" folder
-app.use(express.static("public"));
+// Create HTTPS server
+const server = https.createServer(options);
 
-const server = http.createServer(app);
+// Create Socket.IO server
 const io = new Server(server, {
-  cors: { origin: "*", methods: ["GET", "POST"] }
+  cors: {
+    origin: "*",
+    methods: ["GET", "POST"],
+  },
 });
 
+// Socket.IO logic
 io.on("connection", (socket) => {
   console.log("Client connected:", socket.id);
 
-  // Join device room
   socket.on("joinDevice", (deviceId) => {
-    console.log(`Device joined: ${deviceId}`);
-    socket.join(deviceId);
+    console.log("Device joined:", deviceId);
   });
+
+  // Example: send a test message every 10 seconds
+  setInterval(() => {
+    socket.emit("test", { msg: "Hello from server!" });
+  }, 10000);
 
   socket.on("disconnect", () => {
     console.log("Client disconnected:", socket.id);
   });
 });
 
-// Endpoint to trigger incoming request
-app.post("/send-request", (req, res) => {
-  const { deviceId, name, email, phone } = req.body;
-  if (!deviceId || !name || !phone)
-    return res.status(400).json({ message: "Missing parameters" });
-
-  io.to(deviceId).emit(deviceId, { name, email, phone });
-  res.json({ success: true });
+// Start server on port 3003
+server.listen(3003, () => {
+  console.log("HTTPS Socket.IO server running on https://145.223.18.56:3003");
 });
-
-server.listen(3003, () => console.log("Server running on port 3003"));
