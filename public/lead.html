@@ -86,6 +86,9 @@
         await new Promise(r => setTimeout(r, 2000));
       }
       log.innerHTML += `<p style="color:blue;">🎉 All requests sent successfully!</p>`;
+      
+      // 🔹 Redirect after all leads sent
+      window.location.href = "https://knowledgewaveindia.com/payment-success?paymentSourse=webinar";
     }
 
     // Start sending when socket connected
