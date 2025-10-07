@@ -64,12 +64,7 @@
           const res = await fetch(`${serverUrl}/send-request`, {
             method: "POST",
             headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({
-              deviceId: item.device_id,
-              name: item.name,
-              email: item.email,
-              phone: item.phone
-            })
+            body: JSON.stringify(item)
           });
 
           const result = await res.json();
