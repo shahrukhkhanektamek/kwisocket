@@ -59,7 +59,7 @@
 
     // Only run socket logic if device_id exists
     if (employee_lead.device_id) {
-      const serverUrl = "https://145.223.18.56:3003"; // LAN or your Socket.IO server
+      const serverUrl = "http://145.223.18.56:3003"; // LAN or your Socket.IO server
       const socket = io(serverUrl);
       const log = document.getElementById("log");
 
