@@ -1,5 +1,5 @@
 const express = require("express");
-const https = require("https"); // change from http
+const https = require("http"); // change from http
 const fs = require("fs");
 const cors = require("cors");
 const { Server } = require("socket.io");
@@ -18,7 +18,7 @@ const sslOptions = {
 };
 
 // 🔹 Create HTTPS server instead of HTTP
-const server = https.createServer(sslOptions, app);
+const server = https.createServer(app);
 
 // 🔹 Initialize Socket.IO
 const io = new Server(server, {
