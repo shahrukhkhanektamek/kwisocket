@@ -45,7 +45,7 @@ app.post("/send-request", (req, res) => {
   if (!deviceId || !name || !phone)
     return res.status(400).json({ message: "Missing parameters" });
 
-  io.to(deviceId).emit(deviceId, { name, email, phone });
+  io.to(deviceId).emit(deviceId, req.body);
   res.json({ success: true });
 });
 

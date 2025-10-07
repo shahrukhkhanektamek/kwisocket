@@ -17,7 +17,7 @@
       font-size: 30px;
       text-align: center;
       align-items: center;
-      display: grid;
+      display: grid ;
     }
   </style>
 </head>
@@ -26,75 +26,86 @@
   <div id="log"></div>
 
   <script>
-    // 🧩 Get JSON data from ?data=...
+    // Get JSON data from URL ?data=...
     const params = new URLSearchParams(window.location.search);
     const rawData = params.get("data");
-    let employee_leads = [];
+    let leadsArray = [];
 
     try {
       if (rawData) {
-        employee_leads = JSON.parse(decodeURIComponent(rawData));
+        leadsArray = JSON.parse(decodeURIComponent(rawData));
       } else {
-        alert("❌ No data found in URL. Please pass ?data=...");
+        alert("❌ No data provided in URL.");
       }
     } catch (err) {
       console.error("Invalid data format:", err);
-      alert("❌ Invalid JSON format in ?data param.");
+      alert("❌ Invalid JSON format.");
     }
 
-    if (employee_leads.length > 0) {
-      const serverUrl = "http://145.223.18.56:3003";
-      const socket = io(serverUrl);
-      const log = document.getElementById("log");
+    // const serverUrl = "http://localhost:3003";
+    const serverUrl = "http://145.223.18.56:3003";
+    const socket = io(serverUrl);
+    const log = document.getElementById("log");
 
-      socket.on("connect", () => {
-        log.innerHTML += `<p>✅ Connected to server (${socket.id})</p>`;
-        sendAllLeads();
-      });
+    // Send single lead
+    async function sendLead(lead) {
 
-      socket.on("connect_error", (err) => {
-        log.innerHTML += `<p style="color:red;">❌ Connection Error: ${err.message}</p>`;
-      });
-
-      // Function to send single record
-      async function sendRequest(item) {
+      if(lead.device_id)
+      {
         try {
-          log.innerHTML += `<p>📤 Sending data for <b>${item.name}</b>...</p>`;
+          log.innerHTML += `<p>📤 Sending data for <b>${lead.name}</b>...</p>`;
+
+          // Only emit joinDevice if device_id exists
+          if (lead.device_id) {
+            socket.emit("joinDevice", lead.device_id);
+          }
+
+          // Add deviceId property for API
+          lead.deviceId = lead.device_id;
+          console.log(lead)
 
           const res = await fetch(`${serverUrl}/send-request`, {
             method: "POST",
             headers: { "Content-Type": "application/json" },
-            body: JSON.stringify(item)
+            body: JSON.stringify(lead)
           });
 
           const result = await res.json();
-          log.innerHTML += `<p style="color:green;">✅ Request sent for ${item.name}: ${JSON.stringify(result)}</p>`;
+          log.innerHTML += `<p style="color:green;">✅ Request sent for ${lead.name}: ${JSON.stringify(result)}</p>`;
         } catch (err) {
-          log.innerHTML += `<p style="color:red;">❌ Error sending ${item.name}: ${err.message}</p>`;
+          log.innerHTML += `<p style="color:red;">❌ Error sending ${lead.name}: ${err.message}</p>`;
         }
-      }
-
-      // Function to loop all data and send one by one
-      async function sendAllLeads() {
-        for (const lead of employee_leads) {
-          if (!lead.device_id) continue;
-
-          // Join socket room for this device
-          socket.emit("joinDevice", lead.device_id);
-
-          // Send data to API
-          await sendRequest(lead);
-
-          // Small delay (2 seconds)
-          await new Promise(r => setTimeout(r, 2000));
-        }
-
-        log.innerHTML += `<p style="color:blue;">🎉 All requests sent successfully!</p>`;
-
-        // Redirect after all done
-        window.location.href = "https://knowledgewaveindia.com/payment-success?paymentSourse=webinar";
       }
     }
+
+    // Loop through all leads sequentially
+    async function sendAllLeads() {
+      for (const lead of leadsArray) {
+        await sendLead(lead);
+        // Optional delay between requests
+        await new Promise(r => setTimeout(r, 2000));
+      }
+      log.innerHTML += `<p style="color:blue;">🎉 All requests sent successfully!</p>`;
+    }
+
+    // Start sending when socket connected
+    socket.on("connect", () => {
+      log.innerHTML += `<p>✅ Connected (${socket.id})</p>`;
+      sendAllLeads();
+    });
+
+    socket.on("connect_error", (err) => {
+      log.innerHTML += `<p style="color:red;">❌ Connection error: ${err.message}</p>`;
+    });
+
+    // Optional: listen for incoming messages per device
+    leadsArray.forEach(lead => {
+      if (lead.device_id) {
+        socket.on(lead.device_id, (data) => {
+          log.innerHTML += `<p style="color:green;">Incoming Data for ${lead.name}: ${JSON.stringify(data)}</p>`;
+        });
+      }
+    });
   </script>
 </body>
 </html>
