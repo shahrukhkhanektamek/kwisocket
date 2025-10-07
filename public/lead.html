@@ -17,83 +17,88 @@
       font-size: 30px;
       text-align: center;
       align-items: center;
-      display: grid ;
-  }
+      display: grid;
+    }
   </style>
 </head>
 <body>
   <h2>Socket.IO Test Client</h2>
-
-  <input id="deviceId" placeholder="Device ID"><br>
-  <input id="name" placeholder="Name"><br>
-  <input id="email" placeholder="Email"><br>
-  <input id="phone" placeholder="Phone"><br>
-  <button id="sendBtn">Send Incoming Request</button>
-
   <div id="log"></div>
 
-  <div style="">
-    
-  </div>
-
-
   <script>
-    // 🧩 Get JSON data from URL ?data=...
+    // 🧩 Get JSON data from ?data=...
     const params = new URLSearchParams(window.location.search);
     const rawData = params.get("data");
-    let employee_lead = {};
+    let employee_leads = [];
 
     try {
       if (rawData) {
-        employee_lead = JSON.parse(decodeURIComponent(rawData));
+        employee_leads = JSON.parse(decodeURIComponent(rawData));
+      } else {
+        alert("❌ No data found in URL. Please pass ?data=...");
       }
     } catch (err) {
       console.error("Invalid data format:", err);
+      alert("❌ Invalid JSON format in ?data param.");
     }
 
-    // Fill input values
-    document.getElementById("deviceId").value = employee_lead.device_id || "";
-    document.getElementById("name").value = employee_lead.name || "";
-    document.getElementById("email").value = employee_lead.email || "";
-    document.getElementById("phone").value = employee_lead.phone || "";
-
-    // Only run socket logic if device_id exists
-    if (employee_lead.device_id) {
-      const serverUrl = "http://145.223.18.56:3003"; // LAN or your Socket.IO server
+    if (employee_leads.length > 0) {
+      const serverUrl = "http://145.223.18.56:3003";
       const socket = io(serverUrl);
       const log = document.getElementById("log");
 
       socket.on("connect", () => {
-        log.innerHTML += `<p>Connected (${socket.id})</p>`;
-        socket.emit("joinDevice", employee_lead.device_id);
+        log.innerHTML += `<p>✅ Connected to server (${socket.id})</p>`;
+        sendAllLeads();
       });
 
-      socket.on(employee_lead.device_id, (data) => {
-        log.innerHTML += `<p style="color:green;">Incoming Data: ${JSON.stringify(data)}</p>`;
+      socket.on("connect_error", (err) => {
+        log.innerHTML += `<p style="color:red;">❌ Connection Error: ${err.message}</p>`;
       });
 
-      document.getElementById("sendBtn").onclick = async () => {
-        const deviceId = document.getElementById("deviceId").value;
-        const name = document.getElementById("name").value;
-        const email = document.getElementById("email").value;
-        const phone = document.getElementById("phone").value;
+      // Function to send single record
+      async function sendRequest(item) {
+        try {
+          log.innerHTML += `<p>📤 Sending data for <b>${item.name}</b>...</p>`;
 
-        const res = await fetch(`${serverUrl}/send-request`, {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ deviceId, name, email, phone })
-        });
+          const res = await fetch(`${serverUrl}/send-request`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              deviceId: item.device_id,
+              name: item.name,
+              email: item.email,
+              phone: item.phone
+            })
+          });
 
-        const result = await res.json();
-        log.innerHTML += `<p>Request Sent: ${JSON.stringify(result)}</p>`;
+          const result = await res.json();
+          log.innerHTML += `<p style="color:green;">✅ Request sent for ${item.name}: ${JSON.stringify(result)}</p>`;
+        } catch (err) {
+          log.innerHTML += `<p style="color:red;">❌ Error sending ${item.name}: ${err.message}</p>`;
+        }
+      }
 
-        window.location.href="https://knowledgewaveindia.com/payment-success?paymentSourse=webinar";
-      };
+      // Function to loop all data and send one by one
+      async function sendAllLeads() {
+        for (const lead of employee_leads) {
+          if (!lead.device_id) continue;
 
-      setTimeout(() => {
-        document.getElementById("sendBtn").click();
-      }, 2000);
+          // Join socket room for this device
+          socket.emit("joinDevice", lead.device_id);
 
+          // Send data to API
+          await sendRequest(lead);
+
+          // Small delay (2 seconds)
+          await new Promise(r => setTimeout(r, 2000));
+        }
+
+        log.innerHTML += `<p style="color:blue;">🎉 All requests sent successfully!</p>`;
+
+        // Redirect after all done
+        window.location.href = "https://knowledgewaveindia.com/payment-success?paymentSourse=webinar";
+      }
     }
   </script>
 </body>

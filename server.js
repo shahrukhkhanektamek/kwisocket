@@ -12,10 +12,10 @@ app.use(express.json());
 app.use(express.static("public"));
 
 // 🔹 Load SSL certificate
-const sslOptions = {
-  key: fs.readFileSync("/etc/ssl/private/selfsigned.key"), // path to your private key
-  cert: fs.readFileSync("/etc/ssl/private/selfsigned.crt"), // path to your cert
-};
+// const sslOptions = {
+//   key: fs.readFileSync("/etc/ssl/private/selfsigned.key"), // path to your private key
+//   cert: fs.readFileSync("/etc/ssl/private/selfsigned.crt"), // path to your cert
+// };
 
 // 🔹 Create HTTPS server instead of HTTP
 const server = https.createServer(app);
